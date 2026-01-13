@@ -133,8 +133,7 @@ def main():
     ap = argparse.ArgumentParser(description="Preprocess images folder for DINOv3 (timm)")
     ap.add_argument("--input",  type=str, default="flowers_500", help="Folder with images")
     ap.add_argument("--out",    type=str, default="preprocessed", help="Output root folder")
-    # The exact model names depend on your timm version; enumerate with:
-    #   python -c "import timm; print([m for m in timm.list_models('*dinov3*')])"
+    
     ap.add_argument("--model",  type=str, default="vit_base_patch16_dinov3",
                     help="DINOv3 model name from timm (e.g., vit_base_patch16_dinov3, vit_large_patch16_dinov3, etc.)")
     ap.add_argument("--pretrained", type=str, default="timm_default",
