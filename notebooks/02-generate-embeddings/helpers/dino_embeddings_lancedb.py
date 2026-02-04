@@ -1,37 +1,30 @@
 #!/usr/bin/env python3
 import argparse
-import sys
-from io import BytesIO
-from pathlib import Path
-from typing import List, Tuple, Optional, Dict, Any
-
+import multiprocessing as mp
 import platform
+import sys
 import uuid
 from datetime import datetime, timezone
-import multiprocessing as mp
-
-from PIL import Image
-import numpy as np
-import torch
+from io import BytesIO
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 # Required: LanceDB
 import lancedb
+import numpy as np
 
-# Required: Parquet output 
+# Required: Parquet output
 import pyarrow as pa
 import pyarrow.parquet as pq
+import torch
+from PIL import Image
 
 
 # -----------------------------
 # Helpers
 # -----------------------------
 def utc_now_iso() -> str:
-    return (
-        datetime.now(timezone.utc)
-        .replace(microsecond=0)
-        .isoformat()
-        .replace("+00:00", "Z")
-    )
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def get_pkg_version(mod) -> str:
@@ -102,7 +95,7 @@ def write_run_config(db, config_table_name: str, kv: List[Tuple[str, str]]) -> N
 # -----------------------------
 def build_model_and_transform(model_name: str, image_size: Optional[int] = None):
     import timm
-    from timm.data import resolve_data_config, create_transform
+    from timm.data import create_transform, resolve_data_config
 
     model = timm.create_model(
         model_name,
@@ -182,7 +175,7 @@ def flush_shard_parquet(
         filenames: List[str] = []
         dts: List[str] = []
 
-        for (idv, dimv, fnamev, dtv) in meta_rows:
+        for idv, dimv, fnamev, dtv in meta_rows:
             ids.append(idv)
             dims.append(dimv)
             filenames.append(fnamev)
@@ -216,12 +209,11 @@ def flush_shard_parquet(
 
 # -----------------------------
 
+
 # Main
 # -----------------------------
 def main() -> None:
-    ap = argparse.ArgumentParser(
-        description="Stream+preprocess images from LanceDB for DINOv3 (timm) with worker pool"
-    )
+    ap = argparse.ArgumentParser(description="Stream+preprocess images from LanceDB for DINOv3 (timm) with worker pool")
     ap.add_argument(
         "--config_db",
         type=str,
@@ -300,7 +292,7 @@ def main() -> None:
 
     # Build model + preprocess (main process) and capture timm data config
     model, preprocess, data_cfg = build_model_and_transform(args.model, image_size=args.image_size)
-    
+
     cfg_img = data_cfg["input_size"][1]
     target_size = args.image_size or infer_input_size_from_preprocess(preprocess, default=cfg_img)
 
@@ -310,7 +302,7 @@ def main() -> None:
         ps = model.patch_embed.patch_size
         patch_size_used = str(int(ps[0] if isinstance(ps, (tuple, list)) else ps))
     elif hasattr(model, "patch_size"):
-        ps = getattr(model, "patch_size")
+        ps = model.patch_size
         patch_size_used = str(int(ps[0] if isinstance(ps, (tuple, list)) else ps))
 
     embedding_dim = "unknown"
@@ -322,7 +314,7 @@ def main() -> None:
 
     global_pool_used = "unknown"
     if hasattr(model, "global_pool"):
-        gp = getattr(model, "global_pool")
+        gp = model.global_pool
         global_pool_used = gp if isinstance(gp, str) else gp.__class__.__name__
 
     input_size_cfg = data_cfg.get("input_size", None)
@@ -348,20 +340,22 @@ def main() -> None:
 
     with torch.no_grad():
         dummy = torch.zeros(
-            1, 3, target_size, target_size,
+            1,
+            3,
+            target_size,
+            target_size,
             device=device,
             dtype=model_dtype,
         )
         tokens = model.forward_features(dummy)
-    
+
     num_tokens_total = int(tokens.shape[1])
-    
+
     # patch tokens from actual input geometry used
     patch_int = int(patch_size_used)
     num_patch_tokens = (int(target_size) // patch_int) * (int(target_size) // patch_int)
     num_extra_tokens = num_tokens_total - num_patch_tokens
 
-    
     # Determine run_id
     run_id = args.run_id.strip()
     if not run_id:
@@ -390,14 +384,14 @@ def main() -> None:
 
     kv.append(("patch_size", str(patch_size_used)))
     kv.append(("embedding_dim", str(embedding_dim)))
-    
+
     kv.append(("input_height", str(target_size)))
     kv.append(("input_width", str(target_size)))
-    
+
     kv.append(("num_patch_tokens", str(num_patch_tokens)))
     kv.append(("num_extra_tokens", str(num_extra_tokens)))
     kv.append(("num_tokens_total", str(num_tokens_total)))
-    
+
     kv.append(("torch_version", get_pkg_version(torch)))
     kv.append(("python_version", sys.version.replace("\n", " ")))
     kv.append(("platform", platform.platform()))
@@ -429,6 +423,7 @@ def main() -> None:
 
     try:
         import timm  # type: ignore
+
         kv.append(("timm_version", get_pkg_version(timm)))
     except Exception:
         kv.append(("timm_version", "unknown"))
@@ -556,9 +551,7 @@ def main() -> None:
                             )
 
                         if args.save_tensors:
-                            tens_rows.append(
-                                tens.to(torch.float16 if use_half else torch.float32).cpu()
-                            )
+                            tens_rows.append(tens.to(torch.float16 if use_half else torch.float32).cpu())
 
                         rows_in_shard += 1
 
@@ -655,7 +648,6 @@ def main() -> None:
     print(f"- Embeddings:    {emb_dir if args.save_embeddings else '(skipped)'}")
     print(f"- Tensors:       {tens_dir if args.save_tensors else '(skipped)'}")
     print(f"- Config table:  {args.config_table} (appended)")
-
 
 
 if __name__ == "__main__":

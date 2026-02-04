@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-import argparse, sys
+import argparse
+import sys
 from pathlib import Path
 from typing import List, Tuple
-from PIL import Image
+
 import numpy as np
 import torch
+from PIL import Image
 
-# optional deps 
+# optional deps
 try:
     import pyarrow as pa
     import pyarrow.parquet as pq
+
     HAVE_PARQUET = True
 except Exception:
     HAVE_PARQUET = False
@@ -17,10 +20,13 @@ except Exception:
 try:
     from tqdm import tqdm
 except Exception:
-    def tqdm(x, **k): return x
+
+    def tqdm(x, **k):
+        return x
+
 
 # -----------------------------
-# Helpers 
+# Helpers
 # -----------------------------
 def infer_input_size_from_preprocess(preprocess, default=224):
     try:
@@ -34,6 +40,7 @@ def infer_input_size_from_preprocess(preprocess, default=224):
         pass
     return default
 
+
 def pick_device() -> str:
     if torch.cuda.is_available():
         return "cuda"
@@ -41,9 +48,11 @@ def pick_device() -> str:
         return "mps"
     return "cpu"
 
+
 def list_images(root: Path) -> List[Path]:
     exts = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"}
     return sorted(p for p in root.glob("*") if p.suffix.lower() in exts)
+
 
 def save_webp(img: Image.Image, dst: Path, size: int):
     # Save thumbnail at the model's input size for quick visual checks
@@ -51,12 +60,13 @@ def save_webp(img: Image.Image, dst: Path, size: int):
     img = img.convert("RGB")
     w, h = img.size
     scale = size / min(w, h)
-    img = img.resize((int(round(w*scale)), int(round(h*scale))), Image.BICUBIC)
+    img = img.resize((int(round(w * scale)), int(round(h * scale))), Image.BICUBIC)
     w, h = img.size
     left = (w - size) // 2
     top = (h - size) // 2
     img = img.crop((left, top, left + size, top + size))
     img.save(dst, "WEBP", quality=90, method=6)
+
 
 # -----------------------------
 # DINOv3 via timm
@@ -64,19 +74,14 @@ def save_webp(img: Image.Image, dst: Path, size: int):
 def build_model_and_transform(model_name: str, image_size: int = None):
     try:
         import timm
-        from timm.data import resolve_data_config, create_transform
+        from timm.data import create_transform, resolve_data_config
     except Exception:
         print("ERROR: timm is required for DINOv3. Install: pip install timm", file=sys.stderr)
         raise
 
     # Create model that returns features directly
     # num_classes=0 makes most timm models output pooled features
-    model = timm.create_model(
-        model_name,
-        pretrained=True,
-        num_classes=0,
-        global_pool="avg"
-    )
+    model = timm.create_model(model_name, pretrained=True, num_classes=0, global_pool="avg")
 
     # Build eval transform matching the model
     cfg = resolve_data_config({}, model=model)
@@ -87,24 +92,36 @@ def build_model_and_transform(model_name: str, image_size: int = None):
 
     return model, preprocess
 
+
 # -----------------------------
 # Shard writer
 # -----------------------------
-def flush_shard(shard_idx, emb_rows, meta_rows, tens_rows, emb_dir, tens_dir,
-                use_parquet=True, save_embeddings=True, save_tensors=True):
+def flush_shard(
+    shard_idx,
+    emb_rows,
+    meta_rows,
+    tens_rows,
+    emb_dir,
+    tens_dir,
+    use_parquet=True,
+    save_embeddings=True,
+    save_tensors=True,
+):
     n = len(meta_rows)
     if save_embeddings and n:
         if use_parquet:
             names = [m[0] for m in meta_rows]
-            dims  = [m[1] for m in meta_rows]
+            dims = [m[1] for m in meta_rows]
             paths = [m[2] for m in meta_rows]
             arr_emb = pa.array(emb_rows, type=pa.list_(pa.float32()))
-            table = pa.table({
-                "id":   pa.array(names, type=pa.string()),
-                "dim":  pa.array(dims,  type=pa.int32()),
-                "path": pa.array(paths, type=pa.string()),
-                "embedding": arr_emb,
-            })
+            table = pa.table(
+                {
+                    "id": pa.array(names, type=pa.string()),
+                    "dim": pa.array(dims, type=pa.int32()),
+                    "path": pa.array(paths, type=pa.string()),
+                    "embedding": arr_emb,
+                }
+            )
             out_path = emb_dir / f"embeddings_{shard_idx:04d}.parquet"
             pq.write_table(table, out_path, compression="zstd")
         else:
@@ -113,7 +130,7 @@ def flush_shard(shard_idx, emb_rows, meta_rows, tens_rows, emb_dir, tens_dir,
             np.save(out_npy, np.stack(emb_rows, axis=0))
             with open(out_meta, "w") as f:
                 f.write("id\tdim\tpath\n")
-                for (i,d,p) in meta_rows:
+                for i, d, p in meta_rows:
                     f.write(f"{i}\t{d}\t{p}\n")
 
     if save_tensors and len(tens_rows):
@@ -126,30 +143,40 @@ def flush_shard(shard_idx, emb_rows, meta_rows, tens_rows, emb_dir, tens_dir,
     tens_rows.clear()
     return shard_idx + 1
 
+
 # -----------------------------
 # Main
 # -----------------------------
 def main():
     ap = argparse.ArgumentParser(description="Preprocess images folder for DINOv3 (timm)")
-    ap.add_argument("--input",  type=str, default="flowers_500", help="Folder with images")
-    ap.add_argument("--out",    type=str, default="preprocessed", help="Output root folder")
-    
-    ap.add_argument("--model",  type=str, default="vit_base_patch16_dinov3",
-                    help="DINOv3 model name from timm (e.g., vit_base_patch16_dinov3, vit_large_patch16_dinov3, etc.)")
-    ap.add_argument("--pretrained", type=str, default="timm_default",
-                    help="Compatibility flag only (ignored for timm DINOv3).") # left it for compatibility with CLIP code
-    ap.add_argument("--image_size", type=int, default=None,
-                    help="Force eval size (e.g., 224 or 336). If not set, uses model default.")
-    ap.add_argument("--batch",  type=int, default=32, help="Batch size for embeddings")
+    ap.add_argument("--input", type=str, default="flowers_500", help="Folder with images")
+    ap.add_argument("--out", type=str, default="preprocessed", help="Output root folder")
+
+    ap.add_argument(
+        "--model",
+        type=str,
+        default="vit_base_patch16_dinov3",
+        help="DINOv3 model name from timm (e.g., vit_base_patch16_dinov3, vit_large_patch16_dinov3, etc.)",
+    )
+    ap.add_argument(
+        "--pretrained", type=str, default="timm_default", help="Compatibility flag only (ignored for timm DINOv3)."
+    )  # left it for compatibility with CLIP code
+    ap.add_argument(
+        "--image_size",
+        type=int,
+        default=None,
+        help="Force eval size (e.g., 224 or 336). If not set, uses model default.",
+    )
+    ap.add_argument("--batch", type=int, default=32, help="Batch size for embeddings")
     ap.add_argument("--save_embeddings", action="store_true", help="Write embeddings to Parquet (recommended)")
-    ap.add_argument("--save_tensors",    action="store_true", help="Save model-ready tensors as .pt shards")
-    ap.add_argument("--save_thumbs",     action="store_true", help="Save thumbnails (size = model input) as WebP")
+    ap.add_argument("--save_tensors", action="store_true", help="Save model-ready tensors as .pt shards")
+    ap.add_argument("--save_thumbs", action="store_true", help="Save thumbnails (size = model input) as WebP")
     ap.add_argument("--shard_size", type=int, default=100, help="Rows per Parquet/.pt shard")
-    ap.add_argument("--dtype",  type=str, default="fp16", choices=["fp16","fp32"], help="Inference dtype")
+    ap.add_argument("--dtype", type=str, default="fp16", choices=["fp16", "fp32"], help="Inference dtype")
     args = ap.parse_args()
 
     # Inputs
-    in_dir  = Path(args.input)
+    in_dir = Path(args.input)
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
     imgs = list_images(in_dir)
@@ -179,9 +206,11 @@ def main():
 
     # Outputs
     if args.save_embeddings and not HAVE_PARQUET:
-        print("WARNING: pyarrow not found; installing it enables Parquet. Falling back to .npy shards.", file=sys.stderr)
-    emb_dir   = out_dir / "embeddings"
-    tens_dir  = out_dir / "tensors"
+        print(
+            "WARNING: pyarrow not found; installing it enables Parquet. Falling back to .npy shards.", file=sys.stderr
+        )
+    emb_dir = out_dir / "embeddings"
+    tens_dir = out_dir / "tensors"
     thumb_dir = out_dir / "thumbs"
     for d in (emb_dir, tens_dir, thumb_dir):
         d.mkdir(parents=True, exist_ok=True)
@@ -208,8 +237,8 @@ def main():
     shard_idx = 0
     rows_in_shard = 0
 
-    meta_rows: List[Tuple[str,int,str]] = []
-    emb_rows:  List[np.ndarray] = []
+    meta_rows: List[Tuple[str, int, str]] = []
+    emb_rows: List[np.ndarray] = []
     tens_rows: List[torch.Tensor] = []
 
     # Loop
@@ -223,7 +252,7 @@ def main():
             imgs_tensor = torch.stack(batched_tensors)  # [B,3,H,W]
             imgs_tensor = imgs_tensor.to(device=device, dtype=(torch.float16 if use_half else torch.float32))
             with torch.inference_mode():
-                feats = model(imgs_tensor)        # pooled features (num_classes=0, global_pool='avg')
+                feats = model(imgs_tensor)  # pooled features (num_classes=0, global_pool='avg')
                 feats = torch.nn.functional.normalize(feats, dim=-1)  # cosine-ready
             for spath, feat, tens in zip(batched_paths, feats.detach().cpu(), imgs_tensor.detach().cpu()):
                 if args.save_embeddings:
@@ -235,11 +264,15 @@ def main():
 
             if rows_in_shard >= args.shard_size:
                 shard_idx = flush_shard(
-                    shard_idx, emb_rows, meta_rows, tens_rows,
-                    emb_dir, tens_dir,
+                    shard_idx,
+                    emb_rows,
+                    meta_rows,
+                    tens_rows,
+                    emb_dir,
+                    tens_dir,
                     use_parquet=HAVE_PARQUET and args.save_embeddings,
                     save_embeddings=args.save_embeddings,
-                    save_tensors=args.save_tensors
+                    save_tensors=args.save_tensors,
                 )
                 rows_in_shard = 0
 
@@ -263,17 +296,22 @@ def main():
 
     if rows_in_shard:
         flush_shard(
-            shard_idx, emb_rows, meta_rows, tens_rows,
-            emb_dir, tens_dir,
+            shard_idx,
+            emb_rows,
+            meta_rows,
+            tens_rows,
+            emb_dir,
+            tens_dir,
             use_parquet=HAVE_PARQUET and args.save_embeddings,
             save_embeddings=args.save_embeddings,
-            save_tensors=args.save_tensors
+            save_tensors=args.save_tensors,
         )
 
     print("\nDone.")
     print(f"- Embeddings: {emb_dir if args.save_embeddings else '(skipped)'}")
     print(f"- Tensors:    {tens_dir if args.save_tensors else '(skipped)'}")
     print(f"- Thumbs:     {thumb_dir if args.save_thumbs else '(skipped)'}")
+
 
 if __name__ == "__main__":
     main()
