@@ -1,0 +1,26 @@
+name: Ruff
+
+on:
+  push:
+    branches: [ "main"]
+  pull_request:
+
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Run the Linter (Checks for errors)
+      - name: Ruff Check
+        uses: astral-sh/ruff-action@v3
+        with:
+          # --output-format=github inline annotations in PRs
+          args: "check --output-format=github ."
+
+      # Run the Formatter (Checks for style)
+      - name: Ruff Format
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "format --check ."
