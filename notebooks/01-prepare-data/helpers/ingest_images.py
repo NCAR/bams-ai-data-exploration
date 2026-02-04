@@ -109,7 +109,6 @@ def ingest_images_to_table(
 
     for path in tqdm(paths, desc="Ingesting"):
         filename = path.name
-        id_name = path.stem
         dt = parse_dt_from_filename(filename, dt_format)
 
         img = open_rgb_image(path)
