@@ -1,4 +1,5 @@
 import io
+
 from PIL import Image
 
 
@@ -17,8 +18,10 @@ def image_to_png_bytes(img) -> bytes:
     img.save(buffer, format="PNG", optimize=True)
     return buffer.getvalue()
 
+
 def image_to_jpeg_bytes(img, quality=85):
     import io
+
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=quality, optimize=True)
     return buf.getvalue()

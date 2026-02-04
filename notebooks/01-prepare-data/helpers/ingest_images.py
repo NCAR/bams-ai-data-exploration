@@ -42,8 +42,7 @@ from typing import List, Union
 import lancedb
 from tqdm import tqdm
 
-from .image_utils import open_rgb_image, resize_image, image_to_png_bytes, image_to_jpeg_bytes
-
+from .image_utils import image_to_jpeg_bytes, image_to_png_bytes, open_rgb_image, resize_image
 
 IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp"]
 
@@ -72,9 +71,7 @@ def parse_dt_from_filename(filename: str, fmt: str) -> datetime:
     try:
         return datetime.strptime(filename, fmt)
     except ValueError as e:
-        raise ValueError(
-            f"Failed to parse datetime from filename '{filename}' with format '{fmt}'."
-        ) from e
+        raise ValueError(f"Failed to parse datetime from filename '{filename}' with format '{fmt}'.") from e
 
 
 def ingest_images_to_table(
@@ -112,7 +109,7 @@ def ingest_images_to_table(
 
     for path in tqdm(paths, desc="Ingesting"):
         filename = path.name
-        id_name=path.stem
+        id_name = path.stem
         dt = parse_dt_from_filename(filename, dt_format)
 
         img = open_rgb_image(path)
@@ -120,7 +117,7 @@ def ingest_images_to_table(
         resized = resize_image(img, width, height)
         image_blob = image_to_png_bytes(resized)
 
-        # This ensures that if you insert the exact same image data twice, 
+        # This ensures that if you insert the exact same image data twice,
         # it generates the same ID (deduplication).
         file_hash = hashlib.md5(image_blob).hexdigest()  # MD5 to generate a deterministic, content-based ID
 
@@ -128,7 +125,7 @@ def ingest_images_to_table(
         thumb_blob = image_to_jpeg_bytes(thumb, quality=85)
 
         row = {
-            "id" : file_hash,
+            "id": file_hash,
             "filename": filename,
             "dt": dt,
             "image_blob": image_blob,
