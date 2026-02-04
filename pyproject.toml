@@ -1,0 +1,12 @@
+[tool.ruff]
+# Target Python version
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+# E = pycodestyle errors, F = Pyflakes, I = isort (imports), B = bugbear
+select = ["E", "F", "I", "B"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
