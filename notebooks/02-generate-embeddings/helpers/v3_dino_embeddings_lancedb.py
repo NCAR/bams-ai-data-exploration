@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 import argparse
+import multiprocessing as mp
+import platform
 import sys
 import uuid
-import platform
-from typing import List, Tuple, Optional, Dict, Any
 from datetime import datetime, timezone
 from io import BytesIO
-import multiprocessing as mp
+from typing import Any, Dict, List, Optional, Tuple
 
+import lancedb
 import numpy as np
+import pyarrow as pa
 import torch
 from PIL import Image
-import lancedb
-import pyarrow as pa
 
 
 def utc_now_iso() -> str:
@@ -62,7 +62,7 @@ def write_run_config(db, config_table_name: str, kv: List[Tuple[str, str]]) -> N
 
 def build_model_and_transform(model_name: str, image_size: Optional[int] = None):
     import timm
-    from timm.data import resolve_data_config, create_transform
+    from timm.data import create_transform, resolve_data_config
 
     model = timm.create_model(
         model_name,
