@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-<<<<<<< HEAD:notebooks/02-generate-embeddings/helpers/dino_embeddings_lancedb.py
 import multiprocessing as mp
 import platform
 import sys
@@ -9,29 +8,11 @@ from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-=======
-import sys
-import uuid
-import platform
-from pathlib import Path
-from typing import List, Tuple, Optional, Dict, Any
-from datetime import datetime, timezone
-from io import BytesIO
-import multiprocessing as mp
-
-import numpy as np
-import torch
-from PIL import Image
->>>>>>> 8fc270a (edits to panel):notebooks/02-generate-embeddings/helpers/v2_dino_embeddings_lancedb.py
 
 import lancedb
 import numpy as np
 
-<<<<<<< HEAD:notebooks/02-generate-embeddings/helpers/dino_embeddings_lancedb.py
-# Required: Parquet output
-=======
 # Required for Parquet output
->>>>>>> 8fc270a (edits to panel):notebooks/02-generate-embeddings/helpers/v2_dino_embeddings_lancedb.py
 import pyarrow as pa
 import pyarrow.parquet as pq
 import torch
@@ -205,78 +186,12 @@ def _worker_decode_and_preprocess(task: Dict[str, Any]) -> Optional[Dict[str, An
 
 
 # -----------------------------
-<<<<<<< HEAD:notebooks/02-generate-embeddings/helpers/dino_embeddings_lancedb.py
-# Shard writer
-# -----------------------------
-def flush_shard_parquet(
-    shard_idx: int,
-    emb_rows: List[np.ndarray],
-    meta_rows: List[Tuple[str, int, str, str]],
-    tens_rows: List[torch.Tensor],
-    emb_dir: Path,
-    tens_dir: Path,
-    save_embeddings: bool,
-    save_tensors: bool,
-) -> int:
-    n = len(meta_rows)
 
-    if save_embeddings and n:
-        ids: List[str] = []
-        dims: List[int] = []
-        filenames: List[str] = []
-        dts: List[str] = []
-
-        for idv, dimv, fnamev, dtv in meta_rows:
-            ids.append(idv)
-            dims.append(dimv)
-            filenames.append(fnamev)
-            dts.append(dtv)
-
-        arr_emb = pa.array(emb_rows, type=pa.list_(pa.float32()))
-        table = pa.table(
-            {
-                "id": pa.array(ids, type=pa.string()),
-                "dim": pa.array(dims, type=pa.int32()),
-                "filename": pa.array(filenames, type=pa.string()),
-                "dt": pa.array(dts, type=pa.string()),
-                "embedding": arr_emb,
-            }
-        )
-
-        out_path = emb_dir / f"embeddings_{shard_idx:04d}.parquet"
-        pq.write_table(table, out_path, compression="zstd")
-
-    if save_tensors and len(tens_rows):
-        tens = torch.stack(tens_rows)  # [N, 3, H, W]
-        out_pt = tens_dir / f"tensors_{shard_idx:04d}.pt"
-        torch.save(tens, out_pt)
-
-    emb_rows.clear()
-    meta_rows.clear()
-    tens_rows.clear()
-
-    return shard_idx + 1
-
-
-# -----------------------------
-
-
-# Main
-# -----------------------------
-def main() -> None:
-    ap = argparse.ArgumentParser(description="Stream+preprocess images from LanceDB for DINOv3 (timm) with worker pool")
-    ap.add_argument(
-        "--config_db",
-        type=str,
-        required=True,
-        help="Path/URI to LanceDB database for config table (separate from --db)",
-=======
 # Main
 # -----------------------------
 def main() -> None:
     ap = argparse.ArgumentParser(
         description="Stream+preprocess images from LanceDB for DINOv3 (timm) with worker pool"
->>>>>>> 8fc270a (edits to panel):notebooks/02-generate-embeddings/helpers/v2_dino_embeddings_lancedb.py
     )
 
     ap.add_argument("--config_db", type=str, required=True,
@@ -340,12 +255,6 @@ def main() -> None:
 
     # Build model + preprocess and capture timm cfg
     model, preprocess, data_cfg = build_model_and_transform(args.model, image_size=args.image_size)
-<<<<<<< HEAD:notebooks/02-generate-embeddings/helpers/dino_embeddings_lancedb.py
-
-    cfg_img = data_cfg["input_size"][1]
-    target_size = args.image_size or infer_input_size_from_preprocess(preprocess, default=cfg_img)
-=======
->>>>>>> 8fc270a (edits to panel):notebooks/02-generate-embeddings/helpers/v2_dino_embeddings_lancedb.py
 
     # No 224 magic: use model cfg input_size as the default if args.image_size not set
     cfg_img = int(data_cfg["input_size"][1])
@@ -356,12 +265,6 @@ def main() -> None:
     if hasattr(model, "patch_embed") and hasattr(model.patch_embed, "patch_size"):
         ps = model.patch_embed.patch_size
         patch_size_used = str(int(ps[0] if isinstance(ps, (tuple, list)) else ps))
-<<<<<<< HEAD:notebooks/02-generate-embeddings/helpers/dino_embeddings_lancedb.py
-    elif hasattr(model, "patch_size"):
-        ps = model.patch_size
-        patch_size_used = str(int(ps[0] if isinstance(ps, (tuple, list)) else ps))
-=======
->>>>>>> 8fc270a (edits to panel):notebooks/02-generate-embeddings/helpers/v2_dino_embeddings_lancedb.py
 
     embedding_dim = "unknown"
     if hasattr(model, "num_features"):
@@ -390,23 +293,6 @@ def main() -> None:
     # Token geometry: ask model for total tokens; derive patch tokens from (target_size, patch_size)
     model_dtype = next(model.parameters()).dtype
     with torch.no_grad():
-<<<<<<< HEAD:notebooks/02-generate-embeddings/helpers/dino_embeddings_lancedb.py
-        dummy = torch.zeros(
-            1,
-            3,
-            target_size,
-            target_size,
-            device=device,
-            dtype=model_dtype,
-        )
-        tokens = model.forward_features(dummy)
-
-    num_tokens_total = int(tokens.shape[1])
-
-    # patch tokens from actual input geometry used
-    patch_int = int(patch_size_used)
-    num_patch_tokens = (int(target_size) // patch_int) * (int(target_size) // patch_int)
-=======
         dummy = torch.zeros(1, 3, target_size, target_size, device=device, dtype=model_dtype)
         tokens = model.forward_features(dummy)
 
@@ -417,7 +303,6 @@ def main() -> None:
         sys.exit(2)
 
     num_patch_tokens = (target_size // patch_int) * (target_size // patch_int)
->>>>>>> 8fc270a (edits to panel):notebooks/02-generate-embeddings/helpers/v2_dino_embeddings_lancedb.py
     num_extra_tokens = num_tokens_total - num_patch_tokens
 
     # Determine run_id
@@ -442,29 +327,18 @@ def main() -> None:
     kv.append(("patch_size", str(patch_size_used)))
     kv.append(("embedding_dim", str(embedding_dim)))
 
-<<<<<<< HEAD:notebooks/02-generate-embeddings/helpers/dino_embeddings_lancedb.py
-    kv.append(("input_height", str(target_size)))
-    kv.append(("input_width", str(target_size)))
-=======
     kv.append(("image_size_arg", "" if args.image_size is None else str(args.image_size)))
     kv.append(("image_size_used", str(target_size)))
     kv.append(("input_size_cfg", str(data_cfg.get("input_size"))))
->>>>>>> 8fc270a (edits to panel):notebooks/02-generate-embeddings/helpers/v2_dino_embeddings_lancedb.py
 
     kv.append(("num_patch_tokens", str(num_patch_tokens)))
     kv.append(("num_extra_tokens", str(num_extra_tokens)))
     kv.append(("num_tokens_total", str(num_tokens_total)))
 
-<<<<<<< HEAD:notebooks/02-generate-embeddings/helpers/dino_embeddings_lancedb.py
-    kv.append(("torch_version", get_pkg_version(torch)))
-    kv.append(("python_version", sys.version.replace("\n", " ")))
-    kv.append(("platform", platform.platform()))
-=======
     kv.append(("mean_used", str(data_cfg.get("mean"))))
     kv.append(("std_used", str(data_cfg.get("std"))))
     kv.append(("interpolation_used", str(data_cfg.get("interpolation"))))
     kv.append(("crop_pct_used", str(data_cfg.get("crop_pct"))))
->>>>>>> 8fc270a (edits to panel):notebooks/02-generate-embeddings/helpers/v2_dino_embeddings_lancedb.py
 
     kv.append(("device", device))
     kv.append(("dtype_requested", args.dtype))
@@ -577,23 +451,6 @@ def main() -> None:
 
                     for j in range(feats_cpu.shape[0]):
                         emb = feats_cpu[j]
-<<<<<<< HEAD:notebooks/02-generate-embeddings/helpers/dino_embeddings_lancedb.py
-                        tens = tens_cpu[j]
-
-                        if args.save_embeddings:
-                            emb_rows.append(emb)
-                            meta_rows.append(
-                                (
-                                    gpu_batch_meta[j][0],
-                                    int(emb.shape[0]),
-                                    gpu_batch_meta[j][1],
-                                    gpu_batch_meta[j][2],
-                                )
-                            )
-
-                        if args.save_tensors:
-                            tens_rows.append(tens.to(torch.float16 if use_half else torch.float32).cpu())
-=======
                         emb_rows.append(emb)
                         meta_rows.append(
                             (
@@ -603,7 +460,6 @@ def main() -> None:
                                 gpu_batch_meta[j][2],
                             )
                         )
->>>>>>> 8fc270a (edits to panel):notebooks/02-generate-embeddings/helpers/v2_dino_embeddings_lancedb.py
 
                         rows_in_shard += 1
                         if rows_in_shard >= args.shard_size:

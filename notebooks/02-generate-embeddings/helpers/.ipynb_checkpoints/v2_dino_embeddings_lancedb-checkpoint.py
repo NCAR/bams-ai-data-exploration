@@ -14,10 +14,13 @@ import torch
 from PIL import Image
 
 import lancedb
+import numpy as np
 
 # Required for Parquet output
 import pyarrow as pa
 import pyarrow.parquet as pq
+import torch
+from PIL import Image
 
 
 # -----------------------------
@@ -86,7 +89,7 @@ def build_model_and_transform(model_name: str, image_size: Optional[int] = None)
     Note: for timm==1.0.20 create_transform expects input_size, not img_size.
     """
     import timm
-    from timm.data import resolve_data_config, create_transform
+    from timm.data import create_transform, resolve_data_config
 
     model = timm.create_model(
         model_name,
@@ -187,6 +190,7 @@ def _worker_decode_and_preprocess(task: Dict[str, Any]) -> Optional[Dict[str, An
 
 
 # -----------------------------
+
 # Main
 # -----------------------------
 def main() -> None:
@@ -275,7 +279,7 @@ def main() -> None:
 
     global_pool_used = "unknown"
     if hasattr(model, "global_pool"):
-        gp = getattr(model, "global_pool")
+        gp = model.global_pool
         global_pool_used = gp if isinstance(gp, str) else gp.__class__.__name__
 
     # Device & precision
@@ -358,6 +362,7 @@ def main() -> None:
     kv.append(("platform", platform.platform()))
     try:
         import timm  # type: ignore
+
         kv.append(("timm_version", get_pkg_version(timm)))
     except Exception:
         kv.append(("timm_version", "unknown"))
@@ -535,7 +540,6 @@ def main() -> None:
     print(f"- tokens_total:   {num_tokens_total} (patch={num_patch_tokens}, extra={num_extra_tokens})")
     print(f"- embeddings_dir: {emb_dir}")
     print(f"- config_table:   {args.config_table} (replaced per key)")
-
 
 if __name__ == "__main__":
     main()
