@@ -1,0 +1,21 @@
+# ---- Ignore specific folder ----
+data/
+
+# ---- Jupyter / Python notebooks ----
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+profile_default/
+.ipython/
+
+# ---- Python cache ----
+__pycache__/
+*.py[cod]
+
+# ---- Editor / OS junk ----
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
+.idea/
+
