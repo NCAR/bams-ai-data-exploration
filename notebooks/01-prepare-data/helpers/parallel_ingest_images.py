@@ -1,16 +1,13 @@
-from concurrent.futures import ProcessPoolExecutor, as_completed
-import os
-import argparse
 import hashlib
+import os
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
-from typing import List, Union, Optional
+from typing import List, Optional, Union
 
-import lancedb
 from tqdm import tqdm
 
-from .image_utils import open_rgb_image, resize_image, image_to_png_bytes, image_to_jpeg_bytes
-
+from .image_utils import image_to_jpeg_bytes, image_to_png_bytes, open_rgb_image, resize_image
 
 IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp"]
 
