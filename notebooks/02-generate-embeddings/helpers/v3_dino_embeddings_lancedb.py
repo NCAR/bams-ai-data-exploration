@@ -116,9 +116,7 @@ def create_table_fresh(db, table_name: str, schema: pa.Schema):
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(
-        description="Compute DINOv3 image + patch embeddings and write to LanceDB tables (one forward pass)"
-    )
+    ap = argparse.ArgumentParser(description="Compute DINOv3 image + patch embeddings and write to LanceDB tables (one forward pass)")
 
     ap.add_argument("--db", type=str, required=True, help="LanceDB URI for raw images")
     ap.add_argument("--table", type=str, required=True, help="Raw image table name")
@@ -163,7 +161,6 @@ def main() -> None:
     drop_if_exists(db_out, img_emb_table_name)
     drop_if_exists(db_out, patch_emb_table_name)
 
-
     # Model
     model, _, data_cfg = build_model_and_transform(args.model, image_size=args.image_size)
 
@@ -198,32 +195,32 @@ def main() -> None:
         print("ERROR: token math invalid; cannot slice patch tokens.", file=sys.stderr)
         sys.exit(2)
 
-    
-    embedding_dim = int(tok.shape[2]) 
-    
-    # Output schemas (vectors stored as float32)
-    img_emb_schema = pa.schema([
-        pa.field("image_id", pa.string()),
-        pa.field("embedding", pa.list_(pa.float32(), embedding_dim)),
-    ])
+    embedding_dim = int(tok.shape[2])
 
-    patch_emb_schema = pa.schema([
-        pa.field("patch_id", pa.string()),
-        pa.field("image_id", pa.string()),
-        pa.field("patch_index", pa.int32()),
-        pa.field("embedding", pa.list_(pa.float32(),embedding_dim)),
-    ])
+    # Output schemas (vectors stored as float32)
+    img_emb_schema = pa.schema(
+        [
+            pa.field("image_id", pa.string()),
+            pa.field("embedding", pa.list_(pa.float32(), embedding_dim)),
+        ]
+    )
+
+    patch_emb_schema = pa.schema(
+        [
+            pa.field("patch_id", pa.string()),
+            pa.field("image_id", pa.string()),
+            pa.field("patch_index", pa.int32()),
+            pa.field("embedding", pa.list_(pa.float32(), embedding_dim)),
+        ]
+    )
 
     # Create fresh output tables
     img_emb_tbl = create_table_fresh(db_out, img_emb_table_name, img_emb_schema)
     patch_emb_tbl = create_table_fresh(db_out, patch_emb_table_name, patch_emb_schema)
 
-    
-
     if patch_size_used is None or patch_size_used <= 0:
         print("ERROR: could not infer patch size from model.", file=sys.stderr)
         sys.exit(2)
-
 
     use_half = False
     if args.dtype == "fp16" and (device == "cuda" or device == "mps"):
@@ -232,7 +229,6 @@ def main() -> None:
             use_half = True
         except Exception:
             use_half = False
-
 
     # Write config (includes table names)
     kv: List[Tuple[str, str]] = []
@@ -270,6 +266,7 @@ def main() -> None:
     kv.append(("platform", platform.platform()))
     try:
         import timm  # type: ignore
+
         kv.append(("timm_version", get_pkg_version(timm)))
     except Exception:
         kv.append(("timm_version", "unknown"))
@@ -391,9 +388,7 @@ def main() -> None:
                     gpu_ids.clear()
 
             print(
-                "Processed=" + str(processed)
-                + "  Skipped(missing_blob)=" + str(skipped_missing)
-                + "  Skipped(decode_fail)=" + str(skipped_decode),
+                "Processed=" + str(processed) + "  Skipped(missing_blob)=" + str(skipped_missing) + "  Skipped(decode_fail)=" + str(skipped_decode),
                 file=sys.stderr,
             )
 

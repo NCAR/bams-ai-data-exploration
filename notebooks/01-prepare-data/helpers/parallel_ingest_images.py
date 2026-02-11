@@ -29,9 +29,7 @@ def parse_dt_from_filename(filename: str, fmt: str) -> datetime:
     try:
         return datetime.strptime(filename, fmt)
     except ValueError as e:
-        raise ValueError(
-            f"Failed to parse datetime from filename '{filename}' with format '{fmt}'."
-        ) from e
+        raise ValueError(f"Failed to parse datetime from filename '{filename}' with format '{fmt}'.") from e
 
 
 def _build_row(

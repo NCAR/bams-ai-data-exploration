@@ -127,7 +127,7 @@ def flush_shard_parquet(
     filenames: List[str] = []
     dts: List[str] = []
 
-    for (idv, dimv, fnamev, dtv) in meta_rows:
+    for idv, dimv, fnamev, dtv in meta_rows:
         ids.append(idv)
         dims.append(dimv)
         filenames.append(fnamev)
@@ -187,54 +187,38 @@ def _worker_decode_and_preprocess(task: Dict[str, Any]) -> Optional[Dict[str, An
 
 # -----------------------------
 
+
 # Main
 # -----------------------------
 def main() -> None:
-    ap = argparse.ArgumentParser(
-        description="Stream+preprocess images from LanceDB for DINOv3 (timm) with worker pool"
-    )
+    ap = argparse.ArgumentParser(description="Stream+preprocess images from LanceDB for DINOv3 (timm) with worker pool")
 
-    ap.add_argument("--config_db", type=str, required=True,
-                    help="Path/URI to LanceDB database for config table (separate from --db)")
+    ap.add_argument("--config_db", type=str, required=True, help="Path/URI to LanceDB database for config table (separate from --db)")
 
     ap.add_argument("--db", type=str, required=True, help="Path/URI to LanceDB database (images)")
     ap.add_argument("--table", type=str, required=True, help="LanceDB image table name")
-    ap.add_argument("--img_blob_field", type=str, default="image_blob",
-                    help="Blob column with encoded image bytes")
+    ap.add_argument("--img_blob_field", type=str, default="image_blob", help="Blob column with encoded image bytes")
 
-    ap.add_argument("--config_table", type=str, required=True,
-                    help="LanceDB table name to store run config (key/value)")
+    ap.add_argument("--config_table", type=str, required=True, help="LanceDB table name to store run config (key/value)")
 
-    ap.add_argument("--run_id", type=str, default="",
-                    help="Optional run id; if not set, auto-generated")
-    ap.add_argument("--author", type=str, default="",
-                    help="Optional author (stored in config)")
+    ap.add_argument("--run_id", type=str, default="", help="Optional run id; if not set, auto-generated")
+    ap.add_argument("--author", type=str, default="", help="Optional author (stored in config)")
 
-    ap.add_argument("--out", type=str, default="preprocessed",
-                    help="Output root folder (files)")
+    ap.add_argument("--out", type=str, default="preprocessed", help="Output root folder (files)")
 
-    ap.add_argument("--model", type=str, default="vit_base_patch16_dinov3",
-                    help="Model name from timm")
-    ap.add_argument("--image_size", type=int, default=None,
-                    help="Force eval size (e.g., 224 or 256)")
+    ap.add_argument("--model", type=str, default="vit_base_patch16_dinov3", help="Model name from timm")
+    ap.add_argument("--image_size", type=int, default=None, help="Force eval size (e.g., 224 or 256)")
 
-    ap.add_argument("--batch", type=int, default=256,
-                    help="GPU forward-pass batch size")
-    ap.add_argument("--scan_batch", type=int, default=2000,
-                    help="Rows per streamed RecordBatch from Lance")
-    ap.add_argument("--workers", type=int, default=4,
-                    help="Process workers for decode+preprocess")
+    ap.add_argument("--batch", type=int, default=256, help="GPU forward-pass batch size")
+    ap.add_argument("--scan_batch", type=int, default=2000, help="Rows per streamed RecordBatch from Lance")
+    ap.add_argument("--workers", type=int, default=4, help="Process workers for decode+preprocess")
 
-    ap.add_argument("--shard_size", type=int, default=1000,
-                    help="Rows per Parquet shard")
+    ap.add_argument("--shard_size", type=int, default=1000, help="Rows per Parquet shard")
 
-    ap.add_argument("--dtype", type=str, default="fp16",
-                    choices=["fp16", "fp32"], help="Inference dtype")
-    ap.add_argument("--limit", type=int, default=0,
-                    help="Optional limit on number of rows (0 = no limit)")
+    ap.add_argument("--dtype", type=str, default="fp16", choices=["fp16", "fp32"], help="Inference dtype")
+    ap.add_argument("--limit", type=int, default=0, help="Optional limit on number of rows (0 = no limit)")
 
-    ap.add_argument("--save_embeddings", action="store_true",
-                    help="Write embeddings to Parquet shards (required for output)")
+    ap.add_argument("--save_embeddings", action="store_true", help="Write embeddings to Parquet shards (required for output)")
 
     args = ap.parse_args()
 
@@ -475,9 +459,7 @@ def main() -> None:
                     gpu_batch_meta.clear()
 
             print(
-                f"Processed={processed}"
-                f"  Skipped(missing_blob)={skipped_missing}"
-                f"  Skipped(decode_fail)={skipped_decode}",
+                f"Processed={processed}  Skipped(missing_blob)={skipped_missing}  Skipped(decode_fail)={skipped_decode}",
                 file=sys.stderr,
             )
 
@@ -536,6 +518,7 @@ def main() -> None:
     print(f"- tokens_total:   {num_tokens_total} (patch={num_patch_tokens}, extra={num_extra_tokens})")
     print(f"- embeddings_dir: {emb_dir}")
     print(f"- config_table:   {args.config_table} (replaced per key)")
+
 
 if __name__ == "__main__":
     main()
