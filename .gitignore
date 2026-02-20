@@ -1,4 +1,4 @@
-# ---- Ignore specific folder ----
+# ---- Ignore data / outputs ----
 data/
 
 # ---- Jupyter / Python notebooks ----
@@ -11,6 +11,17 @@ profile_default/
 __pycache__/
 *.py[cod]
 
+# ---- Ruff / linters ----
+.ruff_cache/
+
+# ---- Virtual environments ----
+.venv/
+
+# ---- Conda envs (just in case someone creates locally in repo) ----
+conda-envs/
+env/
+.conda/
+
 # ---- Editor / OS junk ----
 .DS_Store
 Thumbs.db
@@ -18,4 +29,8 @@ Thumbs.db
 *~
 .vscode/
 .idea/
+
+# ---- Logs / temp files (optional but useful) ----
+*.log
+*.tmp
 
