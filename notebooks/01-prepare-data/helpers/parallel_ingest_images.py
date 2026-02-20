@@ -37,7 +37,7 @@ def _build_row(
     *,
     width: int,
     height: int,
-    dt_format: str,
+    dt_format: Optional[str],
     thumb_size: int,
 ) -> dict:
     """
@@ -46,7 +46,9 @@ def _build_row(
     path = Path(path_str)
     filename = path.name
 
-    dt = parse_dt_from_filename(filename, dt_format)
+    dt: Optional[datetime] = None
+    if dt_format is not None:
+        dt = parse_dt_from_filename(filename, dt_format)
 
     img = open_rgb_image(path)
 
@@ -58,13 +60,16 @@ def _build_row(
     thumb = resize_image(img, thumb_size, thumb_size)
     thumb_blob = image_to_jpeg_bytes(thumb, quality=85)
 
-    return {
+    row = {
         "id": file_hash,
         "filename": filename,
-        "dt": dt,
         "image_blob": image_blob,
         "thumb_blob": thumb_blob,
     }
+    if dt is not None:
+        row["dt"] = dt
+
+    return row
 
 
 def ingest_images_to_table(
@@ -73,7 +78,7 @@ def ingest_images_to_table(
     *,
     width: int,
     height: int,
-    dt_format: str,
+    dt_format: Optional[str] = None,
     thumb_size: int = 64,
     batch_size: int = 256,
     workers: Optional[int] = None,
@@ -104,6 +109,15 @@ def ingest_images_to_table(
             batch_size=512,
             workers=8,
             max_in_flight=512,
+        )
+
+        # Or without dt:
+        ingest_images_to_table(
+            table_obj=table,
+            image_dir="/data/images",
+            width=224,
+            height=224,
+            thumb_size=64,
         )
     """
     image_dir = Path(image_dir)
