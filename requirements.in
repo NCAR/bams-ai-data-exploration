@@ -15,4 +15,5 @@ bokeh==3.3.0
 pyviz_comms==3.0.0
 
 torch
+tqdm
 ipykernel
