@@ -135,6 +135,7 @@ def create_table_fresh(db, table_name: str, schema: pa.Schema):
 
 # ---- GPU inference ----
 
+
 def run_inference(model, imgs: torch.Tensor, device: str, use_half: bool, num_extra_tokens: int):
     if use_half:
         imgs = imgs.to(device=device, dtype=torch.float16)
@@ -154,6 +155,7 @@ def run_inference(model, imgs: torch.Tensor, device: str, use_half: bool, num_ex
 
 
 # ---- Batch collector ----
+
 
 class BatchCollector:
     def __init__(self, batch_size: int):
@@ -179,6 +181,7 @@ class BatchCollector:
 
 
 # ---- Async LanceDB writer ----
+
 
 class AsyncLanceWriter:
     def __init__(self, img_emb_tbl, patch_emb_tbl):
@@ -216,12 +219,14 @@ class AsyncLanceWriter:
 
             for p in range(patch_emb.shape[1]):
                 patch_id = image_id + ":" + str(p)
-                patch_rows.append({
-                    "patch_id": patch_id,
-                    "image_id": image_id,
-                    "patch_index": int(p),
-                    "embedding": patch_emb[b, p].tolist(),
-                })
+                patch_rows.append(
+                    {
+                        "patch_id": patch_id,
+                        "image_id": image_id,
+                        "patch_index": int(p),
+                        "embedding": patch_emb[b, p].tolist(),
+                    }
+                )
 
         if len(img_rows) > 0:
             self._img_tbl.add(img_rows)
@@ -236,9 +241,7 @@ class AsyncLanceWriter:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(
-        description="Compute DINOv3 image + patch embeddings and write to LanceDB tables (pipelined)"
-    )
+    ap = argparse.ArgumentParser(description="Compute DINOv3 image + patch embeddings and write to LanceDB tables (pipelined)")
 
     ap.add_argument("--db", type=str, required=True, help="LanceDB URI for raw images")
     ap.add_argument("--table", type=str, required=True, help="Raw image table name")
@@ -319,17 +322,21 @@ def main() -> None:
     embedding_dim = int(tok.shape[2])
 
     # Output schemas
-    img_emb_schema = pa.schema([
-        pa.field("image_id", pa.string()),
-        pa.field("embedding", pa.list_(pa.float32(), embedding_dim)),
-    ])
+    img_emb_schema = pa.schema(
+        [
+            pa.field("image_id", pa.string()),
+            pa.field("embedding", pa.list_(pa.float32(), embedding_dim)),
+        ]
+    )
 
-    patch_emb_schema = pa.schema([
-        pa.field("patch_id", pa.string()),
-        pa.field("image_id", pa.string()),
-        pa.field("patch_index", pa.int32()),
-        pa.field("embedding", pa.list_(pa.float32(), embedding_dim)),
-    ])
+    patch_emb_schema = pa.schema(
+        [
+            pa.field("patch_id", pa.string()),
+            pa.field("image_id", pa.string()),
+            pa.field("patch_index", pa.int32()),
+            pa.field("embedding", pa.list_(pa.float32(), embedding_dim)),
+        ]
+    )
 
     img_emb_tbl = create_table_fresh(db_out, img_emb_table_name, img_emb_schema)
     patch_emb_tbl = create_table_fresh(db_out, patch_emb_table_name, patch_emb_schema)
@@ -378,6 +385,7 @@ def main() -> None:
     kv.append(("platform", platform.platform()))
     try:
         import timm
+
         kv.append(("timm_version", get_pkg_version(timm)))
     except Exception:
         kv.append(("timm_version", "unknown"))
@@ -458,9 +466,7 @@ def main() -> None:
                 ready = collector.add(out["tensor"], out["image_id"])
                 if ready is not None:
                     stacked, ids = ready
-                    img_emb, patch_emb = run_inference(
-                        model, stacked, device, use_half, num_extra_tokens
-                    )
+                    img_emb, patch_emb = run_inference(model, stacked, device, use_half, num_extra_tokens)
                     writer.submit(ids, img_emb, patch_emb)
                     gpu_batches += 1
 
@@ -471,9 +477,7 @@ def main() -> None:
         remaining = collector.flush()
         if remaining is not None:
             stacked, ids = remaining
-            img_emb, patch_emb = run_inference(
-                model, stacked, device, use_half, num_extra_tokens
-            )
+            img_emb, patch_emb = run_inference(model, stacked, device, use_half, num_extra_tokens)
             writer.submit(ids, img_emb, patch_emb)
             gpu_batches += 1
 
