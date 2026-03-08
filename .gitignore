@@ -19,6 +19,8 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Local AI helper
-.claude/
+.ipynb_checkpoints/
+*.pyc
+.env
+.venv/
 
