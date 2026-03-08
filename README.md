@@ -2,7 +2,7 @@
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NCAR/bams-ai-data-exploration/blob/main/notebooks/02-generate-embeddings/generate_dinov3_embeddings.ipynb)
 [![Ruff Workflow](https://github.com/NCAR/bams-ai-data-exploration/actions/workflows/ruff.yml/badge.svg)](https://github.com/NCAR/bams-ai-data-exploration/actions/workflows/ruff.yml)
-[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
+[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
 ## Getting Started
@@ -28,7 +28,7 @@ cd bams-ai-data-exploration
 uv sync
 ```
 
-This will create or update a local virtual environment and install all dependencies from `pyproject.toml` and `uv.lock`.
+This creates or updates a local virtual environment and installs dependencies from `pyproject.toml` and `uv.lock`.
 
 ### 4) Run notebooks
 
@@ -40,17 +40,57 @@ uv run jupyter notebook
 
 ### 5) Run the Python entry point (optional)
 
-If you want to run the default Python script:
-
 ```bash
 uv run python main.py
 ```
 
-## Development Tips
+## What To Do Next
 
-- Keep dependencies updated with `uv lock` and `uv sync`.
-- Run linting locally before opening a pull request:
+After your environment is working, a good next path is:
+
+1. Open `notebooks/01-prepare-data/` and run the notebooks from top to bottom.
+2. Move to `notebooks/02-generate-embeddings/`.
+3. Use the Colab badge above if you prefer a hosted environment instead of local setup.
+
+## How to Review and Contribute
+
+### Review local changes
+
+```bash
+git status
+git diff
+```
+
+### Run checks before opening a PR
 
 ```bash
 uv run ruff check .
 ```
+
+### Create a contribution branch
+
+```bash
+git checkout -b <short-feature-name>
+```
+
+### Commit and push your changes
+
+```bash
+git add .
+git commit -m "Describe your change"
+git push -u origin <short-feature-name>
+```
+
+### Open a pull request
+
+1. Open your branch in GitHub.
+2. Create a PR into `main`.
+3. Include:
+   - What changed
+   - Why it changed
+   - How you tested it
+
+## Development Tips
+
+- Keep dependencies updated with `uv lock` and `uv sync`.
+- Keep notebook and script changes focused so they are easier to review.
