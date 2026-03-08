@@ -1,7 +1,7 @@
 # bams-ai-data-exploration
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NCAR/bams-ai-data-exploration/blob/main/notebooks/02-generate-embeddings/generate_dinov3_embeddings.ipynb)
-[![Ruff Workflow](https://github.com/NCAR/bams-ai-data-exploration/actions/workflows/ruff.yml/badge.svg)](https://github.com/NCAR/bams-ai-data-exploration/actions/workflows/ruff.yml)
+[![Tests](https://github.com/NCAR/bams-ai-data-exploration/actions/workflows/tests.yml/badge.svg)](https://github.com/NCAR/bams-ai-data-exploration/actions/workflows/tests.yml)
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
@@ -61,10 +61,10 @@ git status
 git diff
 ```
 
-### Run checks before opening a PR
+### Run tests before opening a PR
 
 ```bash
-uv run ruff check .
+uv run pytest tests/ -v
 ```
 
 ### Create a contribution branch
