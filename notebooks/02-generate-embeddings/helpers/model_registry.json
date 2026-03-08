@@ -1,0 +1,10 @@
+{
+  "dinov3": {
+    "script": "v4_dino_embeddings_lancedb.py",
+    "default_model": "vit_base_patch16_dinov3",
+    "description": "DINOv2/v3 ViT models with patch embeddings and attention maps",
+    "default_batch": 64,
+    "default_workers": 5,
+    "default_scan_batch": 1000
+  }
+}
