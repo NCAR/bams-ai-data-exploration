@@ -1,8 +1,10 @@
 import json
+import os
 import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Optional
 
 import lancedb
 
@@ -99,6 +101,7 @@ def build_cli_command(
     dtype: str = "fp16",
     limit: int = 0,
     image_size=None,
+    pretrained: Optional[str] = None,
     extra_args: dict = None,
 ) -> str:
     """Build the CLI command string for an embedding pipeline script.
@@ -132,6 +135,9 @@ def build_cli_command(
         str(dtype),
     ]
 
+    if pretrained is not None:
+        parts.extend(["--pretrained", str(pretrained)])
+
     if limit and limit > 0:
         parts.extend(["--limit", str(limit)])
 
@@ -161,6 +167,7 @@ def run_experiment(
     dtype: str = "fp16",
     limit: int = 0,
     image_size=None,
+    pretrained: Optional[str] = None,
     extra_args: dict = None,
 ) -> int:
     """Run an embedding pipeline script inline via subprocess.
@@ -182,6 +189,7 @@ def run_experiment(
         dtype=dtype,
         limit=limit,
         image_size=image_size,
+        pretrained=pretrained,
         extra_args=extra_args,
     )
 
@@ -225,3 +233,47 @@ def upsert_config(db_uri, config_table_name: str, updates: dict) -> None:
     new_tbl = pa.Table.from_pandas(df, preserve_index=False)
     tbl.delete("true")
     tbl.add(new_tbl)
+
+
+def dir_size_bytes(path) -> int:
+    """Return total size in bytes of all files under path (recursive)."""
+    total = 0
+    for root, _, files in os.walk(path):
+        for f in files:
+            total += (Path(root) / f).stat().st_size
+    return total
+
+
+def format_bytes(n: int) -> str:
+    """Format a byte count as a human-readable string (e.g. '1.23 GB')."""
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if n < 1024:
+            return f"{n:.2f} {unit}"
+        n /= 1024
+    return f"{n:.2f} PB"
+
+
+def print_table_sizes(db_uri, *table_names) -> None:
+    """Print on-disk sizes of LanceDB tables under db_uri.
+
+    Example
+    -------
+    print_table_sizes(DB_URI,
+                      experiment["config_name"],
+                      experiment["img_emb_name"],
+                      experiment["patch_emb_name"])
+    """
+    db_path = Path(db_uri)
+    print(f"{'Table':<45} {'Size':>10}")
+    print("-" * 57)
+    total = 0
+    for name in table_names:
+        p = db_path / f"{name}.lance"
+        if p.exists():
+            sz = dir_size_bytes(p)
+            total += sz
+            print(f"{name:<45} {format_bytes(sz):>10}")
+        else:
+            print(f"{name:<45} {'(not found)':>10}")
+    print("-" * 57)
+    print(f"{'TOTAL':<45} {format_bytes(total):>10}")
