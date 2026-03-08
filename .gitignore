@@ -19,3 +19,6 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Local AI helper
+.claude/
+
