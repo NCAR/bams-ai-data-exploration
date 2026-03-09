@@ -40,7 +40,10 @@ from pathlib import Path
 from typing import List, Union
 
 import lancedb
+from rich.console import Console
 from tqdm import tqdm
+
+console = Console()
 
 from .image_utils import image_to_jpeg_bytes, image_to_png_bytes, open_rgb_image, resize_image
 
@@ -141,8 +144,8 @@ def ingest_images_to_table(
     if batch:
         table_obj.add(batch)
 
-    print("Done.")
-    print("Images ingested:", count)
+    console.print("[bold green]Done.[/bold green]")
+    console.print(f"[green]Images ingested:[/green] [bold]{count}[/bold]")
 
     return count
 

@@ -7,9 +7,13 @@ from pathlib import Path
 from typing import Optional
 
 import lancedb
+from rich.console import Console
+from rich.table import Table
 
 HELPERS_DIR = Path(__file__).parent
 REGISTRY_PATH = HELPERS_DIR / "model_registry.json"
+
+console = Console()
 
 
 def _load_registry() -> dict:
@@ -20,10 +24,13 @@ def _load_registry() -> dict:
 def list_models() -> None:
     """Print all registered model families."""
     registry = _load_registry()
-    print(f"{'Family':<15} {'Script':<45} Description")
-    print("-" * 100)
+    tbl = Table(title="Available Models")
+    tbl.add_column("Family", style="cyan", no_wrap=True)
+    tbl.add_column("Script", style="dim")
+    tbl.add_column("Description")
     for name, info in registry.items():
-        print(f"{name:<15} {info['script']:<45} {info.get('description', '')}")
+        tbl.add_row(name, info["script"], info.get("description", ""))
+    console.print(tbl)
 
 
 def get_model_info(family: str) -> dict:
@@ -73,9 +80,9 @@ def setup_experiment(
 
     config_tbl = db.create_table(config_name, data=config_data, mode="overwrite")
 
-    print(f"Config table '{config_name}' created with {len(config_data)} keys.")
-    print(f"  Image embeddings table: {img_emb_name}")
-    print(f"  Patch embeddings table: {patch_emb_name}")
+    console.print(f"[green]Config table[/green] [bold]{config_name}[/bold] created with {len(config_data)} keys.")
+    console.print(f"  Image embeddings  → [cyan]{img_emb_name}[/cyan]")
+    console.print(f"  Patch embeddings  → [cyan]{patch_emb_name}[/cyan]")
 
     return {
         "db": db,
@@ -264,16 +271,19 @@ def print_table_sizes(db_uri, *table_names) -> None:
                       experiment["patch_emb_name"])
     """
     db_path = Path(db_uri)
-    print(f"{'Table':<45} {'Size':>10}")
-    print("-" * 57)
+    tbl = Table(title="Table Sizes")
+    tbl.add_column("Table", style="dim")
+    tbl.add_column("Size", justify="right")
     total = 0
     for name in table_names:
         p = db_path / f"{name}.lance"
         if p.exists():
             sz = dir_size_bytes(p)
             total += sz
-            print(f"{name:<45} {format_bytes(sz):>10}")
+            color = "green" if sz < 100 * 1024**2 else "yellow" if sz < 1024**3 else "red"
+            tbl.add_row(name, f"[{color}]{format_bytes(sz)}[/{color}]")
         else:
-            print(f"{name:<45} {'(not found)':>10}")
-    print("-" * 57)
-    print(f"{'TOTAL':<45} {format_bytes(total):>10}")
+            tbl.add_row(name, "[dim](not found)[/dim]")
+    tbl.add_section()
+    tbl.add_row("[bold]TOTAL[/bold]", f"[bold]{format_bytes(total)}[/bold]")
+    console.print(tbl)

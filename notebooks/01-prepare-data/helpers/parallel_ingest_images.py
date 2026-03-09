@@ -5,9 +5,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Union
 
+from rich.console import Console
 from tqdm import tqdm
 
 from .image_utils import image_to_jpeg_bytes, image_to_png_bytes, open_rgb_image, resize_image
+
+console = Console()
 
 IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp"]
 
@@ -165,7 +168,7 @@ def ingest_images_to_table(
                     except Exception as e:
                         # Decide your behavior: skip or raise.
                         # For ingestion jobs, I usually log + skip.
-                        print(f"[WARN] failed: {e}")
+                        console.print(f"[yellow][WARN][/yellow] failed: {e}")
                         row = None
 
                     if row is not None:
@@ -189,6 +192,6 @@ def ingest_images_to_table(
     if batch:
         table_obj.add(batch)
 
-    print("Done.")
-    print("Images ingested:", count)
+    console.print("[bold green]Done.[/bold green]")
+    console.print(f"[green]Images ingested:[/green] [bold]{count}[/bold]")
     return count
