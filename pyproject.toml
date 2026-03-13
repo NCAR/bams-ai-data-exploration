@@ -25,6 +25,7 @@ dependencies = [
     "tqdm>=4.67.3",
     "marimo>=0.13.0",
     "rich>=13.0.0",
+    "cartopy>=0.25.0",
 ]
 
 [dependency-groups]
